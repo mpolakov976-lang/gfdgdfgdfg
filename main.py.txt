@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Random Quote Generator
+GUI-приложение на tkinter с историей, фильтрацией, сохранением в JSON
+и валидацией ввода.
+"""
+
+import tkinter as tk
+from tkinter import ttk, messagebox
+import random
+import json
+import os
+
+HISTORY_FILE = "history.json"
+
+
+class QuoteGeneratorApp:
+    def __init__(self, root: tk.Tk):
+        self.root = root
+        self.root.title("?? Random Quote Generator")
+        self.root.geometry("920x680")
+        self.root.minsize(700, 500)
+
+        # 1. Предопределённый пул цитат
+        self.quotes = [
+            {"text": "Жизнь — это то, что случается с тобой, пока ты строишь другие планы.", "author": "Джон Леннон", "topic": "Жизнь"},
+            {"text": "Не бойся идти медленно, бойся стоять на месте.", "author": "Китайская мудрость", "topic": "Мотивация"},
+            {"text": "Образование — это самое мощное оружие, которое вы можете использовать, чтобы изменить мир.", "author": "Нельсон Мандела", "topic": "Образование"},
+            {"text": "Всё, что вы можете вообразить — реально.", "author": "Пабло Пикассо", "topic": "Творчество"},
+            {"text": "Успех — это способность идти от неудачи к неудаче, не теряя энтузиазма.", "author": "Уинстон Черчилль", "topic": "Успех"},
+            {"text": "Счастье — это не станция назначения, а способ путешествия.", "author": "Маргарет Ли Ранбек", "topic": "Счастье"}
+        ]
+
+        self.history: list[dict] = []
+        self.load_history()
+
+        self._setup_ui()
+        self._update_filter_options()
+        self._refresh_history_view()
+
+        # Автосохранение при закрытии окна
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    # --------------------------------------------------------------
+    # UI SETUP
+    # --------------------------------------------------------------
+    def _setup_ui(self):
+        # Блок текущей цитаты
+        current_frame = ttk.LabelFrame(self.root, text="?? Текущая цитата", padding=10)
+        current_frame.pack(fill=tk.X, padx=10, pady=5)
+        self.current_label = ttk.Label(
+            current_frame,
+            text="Нажмите «Сгенерировать цитату», чтобы начать.",
+            wraplength=850, justify=tk.CENTER,
+            font=("Segoe UI", 13, "bold")
+        )
+        self.current_label.pack(pady=10)
+
+        # Панель управления
+        ctrl_frame = ttk.Frame(self.root, padding=(10, 5))
+        ctrl_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        # Кнопка генерации
+        self.gen_btn = ttk.Button(ctrl_frame, text="?? Сгенерировать цитату", command=self.generate_quote)
+        self.gen_btn.grid(row=0, column=0, sticky="w", padx=5)
+
+        # Форма добавления новой цитаты
+        add_frame = ttk.LabelFrame(ctrl_frame, text="? Добавить новую цитату", padding=5)
+        add_frame.grid(row=1, column=0, columnspan=2, sticky="we", pady=10)
+
+        ttk.Label(add_frame, text="Текст:").grid(row=0, column=0, padx=5, sticky="e")
+        self.entry_text = ttk.Entry(add_frame, width=42)
+        self.entry_text.grid(row=0, column=1, padx=5)
+
+        ttk.Label(add_frame, text="Автор:").grid(row=0, column=2, padx=5, sticky="e")
+        self.entry_author = ttk.Entry(add_frame, width=15)
+        self.entry_author.grid(row=0, column=3, padx=5)
+
+        ttk.Label(add_frame, text="Тема:").grid(row=0, column=4, padx=5, sticky="e")
+        self.entry_topic = ttk.Entry(add_frame, width=12)
+        self.entry_topic.grid(row=0, column=5, padx=5)
+
+        self.add_btn = ttk.Button(add_frame, text="Добавить", command=self.add_quote)
+        self.add_btn.grid(row=0, column=6, padx=5)
+
+        # Блок фильтрации
+        filter_frame = ttk.LabelFrame(ctrl_frame, text="?? Фильтр истории", padding=5)
+        filter_frame.grid(row=2, column=0, columnspan=2, sticky="we", pady=5)
+
+        ttk.Label(filter_frame, text="Автор:").grid(row=0, column=0, padx=5)
+        self.combo_author = ttk.Combobox(filter_frame, state="readonly", width=20)
+        self.combo_author.grid(row=0, column=1, padx=5)
+
+        ttk.Label(filter_frame, text="Тема:").grid(row=0, column=2, padx=5)
+        self.combo_topic = ttk.Combobox(filter_frame, state="readonly", width=20)
+        self.combo_topic.grid(row=0, column=3, padx=5)
+
+        self.filter_btn = ttk.Button(filter_frame, text="Применить", command=self.apply_filter)
+        self.filter_btn.grid(row=0, column=4, padx=10)
+
+        # Таблица истории
+        hist_frame = ttk.LabelFrame(self.root, text="?? История генераций", padding=10)
+        hist_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        self.tree = ttk.Treeview(hist_frame, columns=("text", "author", "topic"), show="headings")
+        self.tree.heading("text", text="Цитата")
+        self.tree.heading("author", text="Автор")
+        self.tree.heading("topic", text="Тема")
+        self.tree.column("text", width=450, minwidth=200)
+        self.tree.column("author", width=140, minwidth=80)
+        self.tree.column("topic", width=100, minwidth=60)
+
+        scrollbar = ttk.Scrollbar(hist_frame, orient=tk.VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    # --------------------------------------------------------------
+    # CORE LOGIC
+    # --------------------------------------------------------------
+    def generate_quote(self):
+        quote = random.choice(self.quotes)
+        self.current_label.config(
+            text=f"«{quote['text']}»\n— {quote['author']} ({quote['topic']})"
+        )
+        self.history.append(quote.copy())
+        self._save_history()
+        self._update_filter_options()
+        self._refresh_history_view()
+
+    def add_quote(self):
+        text = self.entry_text.get().strip()
+        author = self.entry_author.get().strip()
+        topic = self.entry_topic.get().strip()
+
+        # 6. Валидация ввода
+        if not text or not author or not topic:
+            messagebox.showerror("Ошибка ввода", "Все поля (Текст, Автор, Тема) должны быть заполнены!")
+            return
+
+        new_quote = {"text": text, "author": author, "topic": topic}
+        self.quotes.append(new_quote)
+        self.history.append(new_quote.copy())
+        self._save_history()
+        self._update_filter_options()
+        self._refresh_history_view()
+
+        # Очистка полей
+        self.entry_text.delete(0, tk.END)
+        self.entry_author.delete(0, tk.END)
+        self.entry_topic.delete(0, tk.END)
+        messagebox.showinfo("Успех", "Цитата добавлена в пул и историю!")
+
+    def apply_filter(self):
+        self._refresh_history_view()
+
+    # --------------------------------------------------------------
+    # DATA & VIEW HELPERS
+    # --------------------------------------------------------------
+    def _update_filter_options(self):
+        # Собираем уникальные авторы и темы из пула + истории
+        all_authors = sorted({q["author"] for q in self.quotes + self.history})
+        all_topics = sorted({q["topic"] for q in self.quotes + self.history})
+
+        self.combo_author["values"] = ["Все"] + all_authors
+        self.combo_topic["values"] = ["Все"] + all_topics
+        if self.combo_author.current() == -1:
+            self.combo_author.current(0)
+        if self.combo_topic.current() == -1:
+            self.combo_topic.current(0)
+
+    def _refresh_history_view(self):
+        # Очистка таблицы
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        # Применение фильтров
+        author_f = self.combo_author.get()
+        topic_f = self.combo_topic.get()
+
+        filtered = self.history
+        if author_f != "Все":
+            filtered = [q for q in filtered if q["author"] == author_f]
+        if topic_f != "Все":
+            filtered = [q for q in filtered if q["topic"] == topic_f]
+
+        # Вставка данных
+        for q in filtered:
+            self.tree.insert("", tk.END, values=(q["text"], q["author"], q["topic"]))
+
+    def _save_history(self):
+        try:
+            with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+                json.dump(self.history, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            messagebox.showwarning("Ошибка сохранения", f"Не удалось сохранить историю:\n{e}")
+
+    def load_history(self):
+        if os.path.exists(HISTORY_FILE):
+            try:
+                with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                    self.history = json.load(f)
+            except json.JSONDecodeError:
+                self.history = []
+            except Exception as e:
+                messagebox.showerror("Ошибка загрузки", f"Не удалось загрузить историю:\n{e}")
+                self.history = []
+        else:
+            self.history = []
+
+    def _on_close(self):
+        self._save_history()
+        self.root.destroy()
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    # Установка стилей для современных виджетов (Windows/macOS/Linux)
+    style = ttk.Style()
+    if "clam" in style.theme_names():
+        style.theme_use("clam")
+
+    app = QuoteGeneratorApp(root)
+    root.mainloop()
