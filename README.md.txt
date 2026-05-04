@@ -1,29 +1,29 @@
-# ?? Random Quote Generator
+# рџЋІ Random Quote Generator
 
-## ?? Автор
-**[Поляков Михаил]**  
-?? mpolakov976@gmail.com | ?? [https://github.com/mpolakov976-lang]
+## рџ‘¤ Author
+**[Mikhail Poliakov]**  
+рџ“§ mpolakov976@gmail.com | рџ”— [https://github.com/mpolakov976-lang]
 
-## ?? Описание
-**Random Quote Generator** — лёгкое десктопное GUI-приложение на Python для генерации, хранения и фильтрации цитат. Программа позволяет случайным образом выбирать записи из встроенной коллекции, вести хронологическую историю генераций, фильтровать её по автору или тематике, а также расширять базу собственными цитатами. История автоматически сохраняется в локальный JSON-файл и восстанавливается при следующем запуске.
+## рџ“– Description
+**Random Quote Generator** is a lightweight desktop GUI application built with Python. It generates random quotes from a built-in collection, tracks generation history, allows filtering by author or topic, and lets users expand the database with custom quotes. The history is automatically saved to a local JSON file and fully restored on the next application launch.
 
-## ? Ключевые возможности
-- ?? **Случайная генерация** из предопределённого пула по нажатию одной кнопки.
-- ?? **Таблица истории** с хронологическим списком всех просмотренных цитат.
-- ?? **Фильтрация в реальном времени** по автору и теме.
-- ? **Добавление новых цитат** со строгой валидацией полей.
-- ?? **Персистентность данных**: автосохранение и загрузка из `history.json`.
-- ?? **Адаптивный интерфейс** на `tkinter` + `ttk` с поддержкой современных тем.
+## вњЁ Key Features
+- рџЋІ **Random Generation**: Fetch a random quote with a single click.
+- рџ“њ **History Tracking**: Chronological table of all viewed and added quotes.
+- рџ”Ќ **Real-time Filtering**: Filter the history table by author or topic.
+- вћ• **Custom Quotes**: Add new quotes with strict input validation.
+- рџ’ѕ **Persistent Storage**: Auto-saves and loads history from `history.json`.
+- рџЋЁ **Clean UI**: Modern `tkinter` + `ttk` interface with adaptive theming.
 
-## ?? Стек технологий
+## рџ›  Tech Stack
 - `Python 3.8+`
-- `tkinter` / `ttk` (стандартная GUI-библиотека)
-- `random`, `json`, `os` (встроенные модули)
-- ?? *Внешние зависимости отсутствуют*
+- `tkinter` / `ttk` (Standard GUI library)
+- `random`, `json`, `os` (Built-in modules)
+- рџ“¦ *Zero external dependencies required*
 
-## ?? Установка и запуск
-1. Убедитесь, что установлен **Python 3.8 или выше**.
-2. Клонируйте репозиторий или скачайте файлы проекта:
+## рџљЂ Installation & Usage
+1. Ensure **Python 3.8 or newer** is installed.
+2. Clone or download the project:
    ```bash
-   git clone https://github.com/ВАШ_НИК/random-quote-generator.git
+   git clone https://github.com/YOUR_USERNAME/random-quote-generator.git
    cd random-quote-generator
